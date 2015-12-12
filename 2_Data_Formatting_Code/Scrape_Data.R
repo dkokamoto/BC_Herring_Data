@@ -3,9 +3,8 @@ library(httr)
 library(rvest)
 library(magrittr)
 library(gdata)
-library(stringer)
 
-#### get lat & longs ###
+#### get lat & longs for each location ###
 url <- read_html("http://www.pac.dfo-mpo.gc.ca/science/species-especes/pelagic-pelagique/herring-hareng/herspawn/locindex-eng.html")
 a <- url %>%
   html_nodes("pre") %>%
@@ -39,11 +38,40 @@ levels(coords$SECTION) <-formatC(as.numeric(as.character(levels(coords$SECTION))
 coords$LONG <- with(coords,ifelse(LONG>0,-LONG,LONG))
 write.csv(coords, file= "1_Data/LOC_COORDS.csv",row.names= F)
 
+### read in section names and centroid lat-longs 
+url <- read_html("http://www.pac.dfo-mpo.gc.ca/science/species-especes/pelagic-pelagique/herring-hareng/herspawn/1rollsec-eng.html")
+a <- url %>%
+  html_nodes("pre") %>%
+  html_text()
+data <- strsplit(a[[2]], split= "\r\n")
 
+### split columns ###
+coords2 <- data.frame(apply(
+  t(sapply(data[[1]],
+           function(x) substring(x,
+                                 c(1,2,11,23,26,51,65),
+                                 c(1,10,22,25,50,64,67)))
+  ),2, 
+  trimws))[-1,-1]
 
+### remove row names and add column names 
+row.names(coords2) <- 1:nrow(coords2)
+names(coords2) <- c("CENTROID_LAT","CENTROID_LONG","SECTION","SECTION_NAME","CUM_SPAWN_IND","RANK")
 
+### format columns
+coords2$LAT <- as.numeric(as.character(coords2$LAT))
+coords2$LONG <- as.numeric(as.character(coords2$LONG))
+coords2$CUM_SPAWN_IND <- as.numeric(as.character(coords2$CUM_SPAWN_IND))
+coords2$RANK <- as.numeric(as.character(coords2$RANK))
+coords2$SECTION <- factor(as.character(coords2$SECTION))
+levels(coords2$SECTION) <-formatC(as.numeric(as.character(levels(coords2$SECTION))), width = 3, format = "d", flag = "0") 
 
-read.table(paste0('http://www.pac.dfo-mpo.gc.ca/science/species-especes/pelagic-pelagique/herring-hareng/herspawn/',coords$SECTION[1],'tab-eng.html'), skip= 10, nrows= 1,fill= T)
+### remove NAs
+coords2 <- subset(coords2,!is.na(RANK))
+coords2 <- drop.levels(coords2)
+
+### test header for spawn data
+read.table(paste0('http://www.pac.dfo-mpo.gc.ca/science/species-especes/pelagic-pelagique/herring-hareng/herspawn/',coords2$SECTION[1],'tab-eng.html'), skip= 10, nrows= 1,fill= T)
 header <- c("YEAR","N_SPAWN_RECORDS","SPAWN_HAB_INDEX","LENGTH","WIDTH","LAYERS","W_SST","MEAN_DOY","W_DOY","MIN_DOY","MAX_DOY","PERC_DIVER_SURVEY")
 
 ### function to scrape spawn data ###
@@ -55,7 +83,7 @@ scraper <- function(x) {
 }
 
 ### scrape away!! ###
-spawn_data_list <- lapply(levels(coords$SECTION),scraper)
+spawn_data_list <- lapply(levels(coords2$SECTION),scraper)
 spawn_data <- ldply(spawn_data_list)
 spawn_data <- spawn_data
 names(spawn_data)[1:length(header)] <- header
@@ -79,14 +107,14 @@ catch_data <- catch_data[,colSums(apply(catch_data,2,function(x)x==""))==0]
 names(catch_data)  <- header
 catch_data <- data.frame(apply(catch_data,2,function(x) as.numeric(as.character(x))))
 
-
-### label sections ###
+### label sections in catch data ###
 catch_section <- as.numeric(as.character(subset(catch, V9=="Section")$V10))
 catch_section <- formatC(catch_section, width = 3, format = "d", flag = "0") 
 catch_data$SECTION <- rep(catch_section, each= length(1950:2015))
 
+### join all files to generate master file ###
 catch_spawn_data <- join(spawn_data,catch_data, by= c("YEAR","SECTION"))
-
+catch_spawn_data <- join(catch_spawn_data, coords2, by = "SECTION")
 write.csv(catch_spawn_data, file= "1_Data/scraped_spawn_catch_data.csv",row.names= F)
 
 
