@@ -37,6 +37,10 @@ coords <- drop.levels(coords)
 levels(coords$SECTION) <-formatC(as.numeric(as.character(levels(coords$SECTION))), width = 3, format = "d", flag = "0") 
 
 coords$LONG <- with(coords,ifelse(LONG>0,-LONG,LONG))
+write.csv(coords, file= "1_Data/LOC_COORDS.csv",row.names= F)
+
+
+
 
 
 read.table(paste0('http://www.pac.dfo-mpo.gc.ca/science/species-especes/pelagic-pelagique/herring-hareng/herspawn/',coords$SECTION[1],'tab-eng.html'), skip= 10, nrows= 1,fill= T)
