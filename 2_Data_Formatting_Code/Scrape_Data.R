@@ -59,8 +59,8 @@ row.names(coords2) <- 1:nrow(coords2)
 names(coords2) <- c("CENTROID_LAT","CENTROID_LONG","SECTION","SECTION_NAME","CUM_SPAWN_IND","RANK")
 
 ### format columns
-coords2$LAT <- as.numeric(as.character(coords2$LAT))
-coords2$LONG <- as.numeric(as.character(coords2$LONG))
+coords2$CENTROID_LAT <- as.numeric(as.character(coords2$CENTROID_LAT))
+coords2$CENTROID_LAT <- as.numeric(as.character(coords2$CENTROID_LAT))
 coords2$CUM_SPAWN_IND <- as.numeric(as.character(coords2$CUM_SPAWN_IND))
 coords2$RANK <- as.numeric(as.character(coords2$RANK))
 coords2$SECTION <- factor(as.character(coords2$SECTION))
@@ -69,6 +69,10 @@ levels(coords2$SECTION) <-formatC(as.numeric(as.character(levels(coords2$SECTION
 ### remove NAs
 coords2 <- subset(coords2,!is.na(RANK))
 coords2 <- drop.levels(coords2)
+regions <- unique(coords[,c("REGION","SECTION")])
+coords2 <- join(coords2,regions,by = "SECTION")
+write.csv(coords2, file= "1_Data/SECTION_COORDS.csv",row.names= F)
+
 
 ### test header for spawn data
 read.table(paste0('http://www.pac.dfo-mpo.gc.ca/science/species-especes/pelagic-pelagique/herring-hareng/herspawn/',coords2$SECTION[1],'tab-eng.html'), skip= 10, nrows= 1,fill= T)
@@ -115,7 +119,11 @@ catch_data$SECTION <- rep(catch_section, each= length(1950:2015))
 ### join all files to generate master file ###
 catch_spawn_data <- join(spawn_data,catch_data, by= c("YEAR","SECTION"))
 catch_spawn_data <- join(catch_spawn_data, coords2, by = "SECTION")
-write.csv(catch_spawn_data, file= "1_Data/scraped_spawn_catch_data.csv",row.names= F)
+write.csv(catch_spawn_data, file= "1_Data/SECTION_SPAWN_CATCH_DATA.csv",row.names= F)
+
+
+
+
 
 
 
