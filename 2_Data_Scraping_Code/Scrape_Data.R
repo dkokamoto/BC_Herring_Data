@@ -121,6 +121,9 @@ catch_spawn_data <- join(spawn_data,catch_data, by= c("YEAR","SECTION"))
 catch_spawn_data <- join(catch_spawn_data, coords2, by = "SECTION")
 write.csv(catch_spawn_data, file= "1_Data/SECTION_SPAWN_CATCH_DATA.csv",row.names= F)
 
+### repeat with raw spawn data
+raw_spawn <- read.table("http://www.pac.dfo-mpo.gc.ca/science/species-especes/pelagic-pelagique/herring-hareng/herspawn/Spnrec06-eng.html", fill = T)
+
 
 
 
